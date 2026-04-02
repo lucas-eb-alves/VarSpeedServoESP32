@@ -13,6 +13,14 @@ Controle de posição do servo com velocidade variável:
 write(pos, speed);
 write(pos, speed, wait); // opcional: espera o movimento terminar
 
+```
+Funções básicas de servo:
+attach(), detach()
+read(), readMicroseconds()
+writeMicroseconds()
+attached()
+stop()
+wait()
 
 
 
