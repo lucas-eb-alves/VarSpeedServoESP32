@@ -74,6 +74,6 @@ void loop() {
 # Créditos e Licença
 
 - Autor Original: Michael Margolis (2009) – VarSpeedServo original
-- Adaptação para ESP32: Lucas Emanuel B. Alves
+- Adaptação para ESP32: Lucas Emanuel B. Alves (2026) - VarSpeedServoESP32
 - Mantém licença LGPL 2.1, garantindo uso, modificação e distribuição livre da biblioteca.
 
