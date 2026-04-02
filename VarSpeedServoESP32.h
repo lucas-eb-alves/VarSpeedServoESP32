@@ -1,25 +1,37 @@
 /*
-  VarSpeedServoESP32 - Biblioteca de servo para ESP32
-  Modificado por Lucas Emanuel B. Alves, 2026
-  Baseado na biblioteca VarSpeedServo original:
-    - Copyright (c) 2009 Michael Margolis
-    - Função slowmove adicionada em 2010 por Korman
-    - Atualizações 2013 por Philip van Allen (pva)
-  Todos os direitos reservados pelos autores originais.
+VarSpeedServoESP32 - Servo Library for ESP32
 
-  Esta biblioteca é licenciada sob a GNU Lesser General Public License (LGPL) versão 2.1 ou superior.
-  Você pode redistribuir e/ou modificar sob os termos da LGPL, disponível em:
-  https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+Modified by Lucas Emanuel B. Alves, 2026
 
-  Esta biblioteca é distribuída na esperança de que seja útil, mas sem
-  qualquer garantia; sem mesmo a garantia implícita de comercialização
-  ou adequação a um propósito específico.
+Based on the original VarSpeedServo library:
 
-  Modificações por Lucas Emanuel B. Alves:
-    - Adaptada para ESP32
-    - Controle de velocidade sem necessidade de função loop separada
-    - Outros ajustes para compatibilidade com o hardware
+- Copyright (c) 2009 Michael Margolis
+
+- "slowmove()" function added in 2010 by Korman
+
+- Updates 2013 by Philip van Allen (pva)
+
+All rights reserved by the original authors.
+
+This library is licensed under the GNU Lesser General Public License (LGPL) version 2.1 or later.
+
+You may redistribute and/or modify it under the terms of the LGPL, available at:
+
+https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+This library is distributed in the hope that it will be useful, but without
+any warranty; without even the implied warranty of merchantability
+or fitness for a particular purpose.
+
+Modifications by Lucas Emanuel B. Alves:
+
+- Adapted for ESP32
+
+- Speed control without the need for a separate loop function
+
+- Other adjustments for hardware compatibility
 */
+
 #ifndef VarSpeedServoESP32_h
 #define VarSpeedServoESP32_h
 
@@ -31,19 +43,19 @@ public:
 
   uint8_t attach(int pin);
 
-  void write(int value);                           // movimento instantâneo
-  void write(int value, uint8_t speed);           // movimento com velocidade controlada
-  void write(int value, uint8_t speed, bool wait); // movimento com velocidade controlado e com espera opcional
+  void write(int value);                           // instant movement.
+  void write(int value, uint8_t speed);           // movement with controlled speed.
+  void write(int value, uint8_t speed, bool wait); // Movement with controlled speed and optional waiting time.
 
-  void slowmove(int value, uint8_t speed, bool waitFlag = false);  //igual o write, porem n espera
+  void slowmove(int value, uint8_t speed, bool waitFlag = false);  //Like "write()", but doesn't "wait()".
 
-  void wait();                                     // bloqueia até finalizar o movimento
-  int read();                                      // posição atual
+  void wait();                                     // Block until the movement is complete.
+  int read();                                      // current position.
 
-  bool isMoving();  //retorna se o servo ainda está se movendo
-  void moveSequence(int* positions, int size, uint8_t speed, bool waitFlag = true); //move o servo por várias posições em sequência
-  void detach();  //desliga o servo e libera o pino
-  bool attached(); //desliga o servo e libera o pino
+  bool isMoving();  //returns if the servo is still moving.
+  void moveSequence(int* positions, int size, uint8_t speed, bool waitFlag = true); //The servo moves through several positions in sequence.
+  void detach();  //Turn off the servo and release the pin.
+  bool attached(); //Checks whether the servo is connected (attached) or not.
 
 private:
   int servoPin; 
@@ -61,10 +73,10 @@ private:
   uint32_t angleToDuty(int angle);
   static int nextChannel;
 
-  // Task handle para movimento assíncrono
+  //Task handle for asynchronous motion
   TaskHandle_t taskHandle;
 
-  // Função que roda na task FreeRTOS
+  //Function that runs in the FreeRTOS task.
   static void servoTask(void* param);
 };
 
