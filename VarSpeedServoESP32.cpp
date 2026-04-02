@@ -1,4 +1,4 @@
-// VarSpeedServoESP32 - baseado em VarSpeedServo original, LGPL 2.1
+//VarSpeedServoESP32 - based on the original VarSpeedServo, GNU LGPL 2.1
 
 #include "VarSpeedServoESP32.h"
 
