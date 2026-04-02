@@ -94,5 +94,5 @@ Or install manually by extracting the .zip file to the Arduino libraries folder.
 
 - Original Author: Michael Margolis (2009) – Original VarSpeedServo
 - Adaptation for ESP32: Lucas Emanuel B. Alves (2026) - VarSpeedServoESP32
-- Maintains LGPL 2.1 license, guaranteeing free use, modification and distribution of the library.
+- Maintains GLGPL 2.1 license, guaranteeing free use, modification and distribution of the library.
 
