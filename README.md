@@ -20,9 +20,13 @@ write(pos, speed, wait); // optional: "waits" for the movement to finish
 
   - attach(), detach()
   
-  - read(), readMicroseconds()
-  
-  - writeMicroseconds()
+  - read()
+    
+  - isMoving()
+    
+  - sequencePlay()
+    
+  - sequenceStop()
   
   - attached()
   
@@ -34,11 +38,11 @@ write(pos, speed, wait); // optional: "waits" for the movement to finish
   
   - Designed for ESP32, using compatible timers.
 
-Note: Sequences "sequencePlay()", "sequenceStop()" and "isMoving()" are not implemented in this version.
+Note: Sequences "writeMicroseconds()" and "readMicroseconds()" are not implemented in this version.
 
 ### Similarities:
 
-- Basic servo control functions: "attach()", "detach()", "read()", "readMicroseconds()", "writeMicroseconds()", "attached()", "stop()", and "wait()".
+- Basic servo control functions: "attach()", "detach()", "read()", "attached()", "stop()", and "wait()".
 
 - "slowmove()" function maintained for compatibility.
 
