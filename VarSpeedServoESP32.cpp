@@ -2,6 +2,10 @@
 
 #include "VarSpeedServoESP32.h"
 
+#ifndef ESP_ARDUINO_VERSION_MAJOR
+#define ESP_ARDUINO_VERSION_MAJOR 1
+#endif
+
 #define SERVO_FREQ 50
 #define SERVO_RESOLUTION 16
 
@@ -30,7 +34,13 @@ uint8_t VarSpeedServoESP32::attach(int pin) {
   servoChannel = nextChannel++;
   if (servoChannel > 15) return 0;
 
-  ledcAttach(servoPin, SERVO_FREQ, SERVO_RESOLUTION);
+  #if ESP_ARDUINO_VERSION_MAJOR >= 2
+    ledcSetup(servoChannel, SERVO_FREQ, SERVO_RESOLUTION);
+    ledcAttachPin(servoPin, servoChannel);
+  #else
+    ledcAttach(servoPin, SERVO_FREQ, SERVO_RESOLUTION);
+  #endif
+
   write(90);
 
   xTaskCreatePinnedToCore(
@@ -50,7 +60,12 @@ void VarSpeedServoESP32::write(int value) {
   currentPos = value;
   movingPos = value;
   targetPos = value;
-  ledcWrite(servoPin, angleToDuty(value));
+
+  #if ESP_ARDUINO_VERSION_MAJOR >= 2
+    ledcWrite(servoChannel, angleToDuty(value));
+  #else
+    ledcWrite(servoPin, angleToDuty(value));
+  #endif
 }
 
 void VarSpeedServoESP32::write(int value, uint8_t speed) {
@@ -81,7 +96,12 @@ void VarSpeedServoESP32::servoTask(void* param) {
         self->movingPos = self->targetPos;
 
       self->currentPos = self->movingPos;
-      ledcWrite(self->servoPin, self->angleToDuty((int)self->movingPos));
+
+      #if ESP_ARDUINO_VERSION_MAJOR >= 2
+        ledcWrite(self->servoChannel, self->angleToDuty((int)self->movingPos));
+      #else
+        ledcWrite(self->servoPin, self->angleToDuty((int)self->movingPos));
+      #endif
     }
     vTaskDelay(pdMS_TO_TICKS(self->stepDelay));
   }
@@ -105,7 +125,7 @@ void VarSpeedServoESP32::moveSequence(int* positions, int size, uint8_t speed, b
 }
 
 void VarSpeedServoESP32::detach() {
-  ledcDetach(servoChannel);
+  ledcDetachPin(servoPin);
   servoPin = -1;
 }
 
