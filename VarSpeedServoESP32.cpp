@@ -2,50 +2,119 @@
 
 #include "VarSpeedServoESP32.h"
 
-#ifndef ESP_ARDUINO_VERSION_MAJOR
-#define ESP_ARDUINO_VERSION_MAJOR 1
-#endif
+// PWM range
+static const int MIN_PULSE = 500;
+static const int MAX_PULSE = 2400;
 
-#define SERVO_FREQ 50
-#define SERVO_RESOLUTION 16
+// Dead zone
+static const int DEADZONE = 2;
 
 int VarSpeedServoESP32::nextChannel = 0;
 
 VarSpeedServoESP32::VarSpeedServoESP32() {
+
+  servoPin = -1;
+  servoChannel = -1;
+
   currentPos = 90;
   targetPos = 90;
   movingPos = 90;
-  moveSpeed = 100;
+
+  moveSpeed = 50;
+
   steps = 0;
   stepSize = 0;
   stepDelay = 20;
+
   taskHandle = NULL;
 }
 
-uint32_t VarSpeedServoESP32::angleToDuty(int angle) {
-  int minUs = 500;
-  int maxUs = 2500;
-  int pulse = map(angle, 0, 180, minUs, maxUs);
-  return (pulse * ((1 << SERVO_RESOLUTION) - 1)) / 20000;
-}
-
 uint8_t VarSpeedServoESP32::attach(int pin) {
+
+  if (nextChannel >= 16) return 0;
+
   servoPin = pin;
   servoChannel = nextChannel++;
-  if (servoChannel > 15) return 0;
 
-  #if ESP_ARDUINO_VERSION_MAJOR >= 2
-    ledcSetup(servoChannel, SERVO_FREQ, SERVO_RESOLUTION);
-    ledcAttachPin(servoPin, servoChannel);
-  #else
-    ledcAttach(servoPin, SERVO_FREQ, SERVO_RESOLUTION);
-  #endif
+  ledcSetup(servoChannel, 50, 16);
+  ledcAttachPin(servoPin, servoChannel);
 
-  write(90);
+  ledcWrite(servoChannel, angleToDuty(currentPos));
+
+  return 1;
+}
+
+void VarSpeedServoESP32::detach() {
+
+  if (servoPin >= 0) {
+
+    ledcDetachPin(servoPin);
+
+    if (taskHandle != NULL) {
+      vTaskDelete(taskHandle);
+      taskHandle = NULL;
+    }
+
+    servoPin = -1;
+    servoChannel = -1;
+  }
+}
+
+bool VarSpeedServoESP32::attached() {
+
+  return servoPin >= 0;
+}
+
+uint32_t VarSpeedServoESP32::angleToDuty(int angle) {
+
+  angle = constrain(angle, 0, 180);
+
+  uint32_t duty = map(
+    angle,
+    0,
+    180,
+    MIN_PULSE * 65536 / 20000,
+    MAX_PULSE * 65536 / 20000
+  );
+
+  return duty;
+}
+
+void VarSpeedServoESP32::write(int value) {
+
+  write(value, moveSpeed, false);
+}
+
+void VarSpeedServoESP32::write(
+  int value,
+  uint8_t speed,
+  bool waitFlag
+) {
+
+  if (!attached()) return;
+
+  targetPos = constrain(value, 0, 180);
+
+  if (abs(currentPos - targetPos) <= DEADZONE)
+    return;
+
+  moveSpeed = constrain(speed, 1, 100);
+
+  steps = abs(targetPos - currentPos);
+
+  stepSize = (float)(targetPos - currentPos) / steps;
+
+  stepDelay = map(moveSpeed, 1, 100, 20, 1);
+
+  if (taskHandle != NULL) {
+
+    vTaskDelete(taskHandle);
+    taskHandle = NULL;
+  }
 
   xTaskCreatePinnedToCore(
     servoTask,
-    "ServoTask",
+    "servoTask",
     2048,
     this,
     1,
@@ -53,90 +122,75 @@ uint8_t VarSpeedServoESP32::attach(int pin) {
     1
   );
 
-  return 1;
-}
-
-void VarSpeedServoESP32::write(int value) {
-  currentPos = value;
-  movingPos = value;
-  targetPos = value;
-
-  #if ESP_ARDUINO_VERSION_MAJOR >= 2
-    ledcWrite(servoChannel, angleToDuty(value));
-  #else
-    ledcWrite(servoPin, angleToDuty(value));
-  #endif
-}
-
-void VarSpeedServoESP32::write(int value, uint8_t speed) {
-  targetPos = value;
-  if (speed == 0) speed = 100;
-  moveSpeed = speed;
-
-  int diff = targetPos - currentPos;
-  steps = map(moveSpeed, 1, 100, 200, 5);
-  stepSize = (float)diff / steps;
-  stepDelay = 20;
-}
-
-void VarSpeedServoESP32::write(int value, uint8_t speed, bool waitFlag) {
-  write(value, speed);
   if (waitFlag) wait();
 }
 
-void VarSpeedServoESP32::servoTask(void* param) {
-  VarSpeedServoESP32* self = (VarSpeedServoESP32*)param;
+void VarSpeedServoESP32::slowmove(
+  int value,
+  uint8_t speed,
+  bool waitFlag
+) {
 
-  for (;;) {
-    if (self->movingPos != self->targetPos) {
-      self->movingPos += self->stepSize;
-
-      if ((self->stepSize > 0 && self->movingPos > self->targetPos) ||
-          (self->stepSize < 0 && self->movingPos < self->targetPos))
-        self->movingPos = self->targetPos;
-
-      self->currentPos = self->movingPos;
-
-      #if ESP_ARDUINO_VERSION_MAJOR >= 2
-        ledcWrite(self->servoChannel, self->angleToDuty((int)self->movingPos));
-      #else
-        ledcWrite(self->servoPin, self->angleToDuty((int)self->movingPos));
-      #endif
-    }
-    vTaskDelay(pdMS_TO_TICKS(self->stepDelay));
-  }
-}
-
-void VarSpeedServoESP32::wait() {
-  while (movingPos != targetPos) {
-    vTaskDelay(pdMS_TO_TICKS(10));
-  }
-}
-
-bool VarSpeedServoESP32::isMoving() {
-  return movingPos != targetPos;
-}
-
-void VarSpeedServoESP32::moveSequence(int* positions, int size, uint8_t speed, bool waitFlag) {
-  for (int i = 0; i < size; i++) {
-    write(positions[i], speed);
-    if (waitFlag) wait();
-  }
-}
-
-void VarSpeedServoESP32::detach() {
-  ledcDetachPin(servoPin);
-  servoPin = -1;
-}
-
-bool VarSpeedServoESP32::attached() {
-  return servoPin != -1;
-}
-
-void VarSpeedServoESP32::slowmove(int value, uint8_t speed, bool waitFlag) {
   write(value, speed, waitFlag);
 }
 
+void VarSpeedServoESP32::servoTask(void* param) {
+
+  VarSpeedServoESP32* servo =
+    (VarSpeedServoESP32*)param;
+
+  servo->movingPos = servo->currentPos;
+
+  for (int i = 0; i < servo->steps; i++) {
+
+    servo->movingPos += servo->stepSize;
+
+    int angle = (int)servo->movingPos;
+
+    ledcWrite(
+      servo->servoChannel,
+      servo->angleToDuty(angle)
+    );
+
+    vTaskDelay(
+      servo->stepDelay / portTICK_PERIOD_MS
+    );
+  }
+
+  servo->currentPos = servo->targetPos;
+
+  servo->taskHandle = NULL;
+
+  vTaskDelete(NULL);
+}
+
+void VarSpeedServoESP32::wait() {
+
+  while (taskHandle != NULL) {
+
+    delay(5);
+  }
+}
+
 int VarSpeedServoESP32::read() {
+
   return currentPos;
+}
+
+bool VarSpeedServoESP32::isMoving() {
+
+  return taskHandle != NULL;
+}
+
+void VarSpeedServoESP32::moveSequence(
+  int* positions,
+  int size,
+  uint8_t speed,
+  bool waitFlag
+) {
+
+  for (int i = 0; i < size; i++) {
+
+    write(positions[i], speed, true);
+  }
 }
