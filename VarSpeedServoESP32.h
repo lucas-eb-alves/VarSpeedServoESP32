@@ -57,6 +57,10 @@ public:
   void detach();  //Turn off the servo and release the pin.
   bool attached(); //Checks whether the servo is connected (attached) or not.
 
+  static void servoTask_trackingMove(void* param);
+  void trackingMove(int value);
+
+TaskHandle_t trackingTaskHandle;
 private:
   int servoPin; 
   int servoChannel;
@@ -79,5 +83,7 @@ private:
   //Function that runs in the FreeRTOS task.
   static void servoTask(void* param);
 };
+
+
 
 #endif
