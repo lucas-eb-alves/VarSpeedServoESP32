@@ -1,4 +1,3 @@
-//VarSpeedServoESP32 - based on the original VarSpeedServo, GNU LGPL 2.1
 /*
 VarSpeedServoESP32 - Servo Library for ESP32
 
@@ -137,14 +136,16 @@ void VarSpeedServoESP32::write(int value, uint8_t speed, bool waitFlag) {
 
   moveSpeed = constrain(speed, 1, 100);
 
-  // Calcula passos e direção
+  // Calcula passos e direção a partir da posição atual real
   steps    = abs(targetPos - (int)currentPos);
   stepSize = (float)(targetPos - (int)currentPos) / (float)steps;
 
   // speed 1 → 20ms/passo (lento), speed 100 → 1ms/passo (rápido)
   stepDelay = map(moveSpeed, 1, 100, 20, 1);
 
-  // Para task anterior se existir
+  // Para task anterior se existir.
+  // currentPos já reflete a posição real porque é atualizado a cada passo
+  // dentro de servoTask(), então o próximo movimento parte do lugar certo.
   if (taskHandle != NULL) {
     vTaskDelete(taskHandle);
     taskHandle = NULL;
@@ -184,9 +185,15 @@ void VarSpeedServoESP32::servoTask(void* param) {
 
     ledcWrite(s->servoChannel, s->angleToDuty(angle));
 
+    // CORREÇÃO: atualiza currentPos a cada passo, não só no final.
+    // Assim, se a task for interrompida no meio, a biblioteca conhece
+    // a posição real do servo e o próximo write() parte do lugar certo.
+    s->currentPos = (float)angle;
+
     vTaskDelay(s->stepDelay / portTICK_PERIOD_MS);
   }
 
+  // Garante snap exato ao alvo ao terminar normalmente
   s->currentPos = (float)s->targetPos;
   s->movingPos  = s->currentPos;
   s->taskHandle = NULL;
