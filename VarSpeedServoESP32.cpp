@@ -14,6 +14,7 @@ Licensed under the GNU LGPL v2.1 or later.
 https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
 */
 
+
 #include "VarSpeedServoESP32.h"
 #include <Arduino.h>
 
@@ -200,7 +201,31 @@ void VarSpeedServoESP32::servoTask(void* param) {
 
   vTaskDelete(NULL);
 }
+//===================TaskTraking=========================
+void VarSpeedServoESP32::servoTask_trackingMove(void* param) {
+  VarSpeedServoESP32* s = (VarSpeedServoESP32*)param;
 
+  float pos = s->currentPos;
+
+  const float Kp = 0.10f;
+  const int dt = 10;
+
+  while (true) {
+
+    float error = s->targetPos - pos;
+    pos += error * Kp;
+
+    pos = constrain(pos, 0, 180);
+
+    int angle = (int)pos;
+
+    ledcWrite(s->servoChannel, s->angleToDuty(angle));
+
+    s->currentPos = pos;
+
+    vTaskDelay(dt / portTICK_PERIOD_MS);
+  }
+}
 // ================= READ =================
 
 int VarSpeedServoESP32::read() {
@@ -220,7 +245,22 @@ void VarSpeedServoESP32::wait() {
     delay(5);
   }
 }
+//===================== trackingMove =================
+void VarSpeedServoESP32::trackingMove(int value) {
+  targetPos = constrain(value, 0, 180);
 
+  if (trackingTaskHandle == NULL) {
+    xTaskCreatePinnedToCore(
+      servoTask_trackingMove,
+      "servoTrack",
+      4096,
+      this,
+      1,
+      &trackingTaskHandle,
+      1
+    );
+  }
+}
 // ================= SEQUENCE =================
 
 void VarSpeedServoESP32::moveSequence(
