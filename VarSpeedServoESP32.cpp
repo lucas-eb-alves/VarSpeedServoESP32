@@ -80,9 +80,19 @@ uint32_t VarSpeedServoESP32::angleToDuty(int angle) {
   return duty;
 }
 
+// ================= WRITE FUNCTIONS =================
+
 void VarSpeedServoESP32::write(int value) {
 
   write(value, moveSpeed, false);
+}
+
+void VarSpeedServoESP32::write(
+  int value,
+  uint8_t speed
+) {
+
+  write(value, speed, false);
 }
 
 void VarSpeedServoESP32::write(
@@ -134,6 +144,8 @@ void VarSpeedServoESP32::slowmove(
   write(value, speed, waitFlag);
 }
 
+// ================= TASK =================
+
 void VarSpeedServoESP32::servoTask(void* param) {
 
   VarSpeedServoESP32* servo =
@@ -163,6 +175,8 @@ void VarSpeedServoESP32::servoTask(void* param) {
 
   vTaskDelete(NULL);
 }
+
+// ================= CONTROL =================
 
 void VarSpeedServoESP32::wait() {
 
